@@ -54,7 +54,7 @@ sudo su -
 and execute:
 
 ```
-va_hosts4ssh server
+va_hosts4ssh server  #password: packer
 pvecm create kluster
 sleep 5
 for i in server2 server3; do ssh $i "pvecm add server1"; done
@@ -76,11 +76,19 @@ for i in server1 server2 server3; do ssh $i "ceph-disk zap /dev/sdb" && ssh $i "
 cd /etc/pve/priv/
 mkdir ceph
 cp /etc/ceph/ceph.client.admin.keyring ceph/rbd.keyring
-cp /etc/ceph/ceph.client.admin.keyring ceph/ceph4vm.keyring
+ceph -s                          #ceph should be online
+ceph osd lspools                 #look at the pools!
+ceph osd pool create rbd 128     #create pool if not present
 ceph osd pool set rbd size 2     #replica number
 ceph osd pool set rbd min_size 1 #min replica number after e.g. server failure
+ceph osd pool application enable rbd rbd
+rbd pool init rbd
+#GUI proxmox in a host browser: https://192.168.<YOUR_NET>.71:8006
 #add in GUI rdb storage named ceph4vm with monitor hosts: 192.168.<YOUR_NET>.71 192.168.<YOUR_NET>.72 192.168.<YOUR_NET>.73 #CHANGE TO YOUR NET 
-#net configs are corrected, vmbr0 on the second nic2 
+#it should be added automatically
+#cp /etc/ceph/ceph.client.admin.keyring ceph/ceph4vm.keyring 
+#net configs corrected, vmbr0 moved to the the second NIC2 
+#first NIC1 is dedicated to vagrant NAT inner communication.
 cd
 ae "rm -f ~/interfaces && cp /usr/local/bin/va_interfaces ~/interfaces"
 for i in server1 server2 server3; do ssh $i "sed -i 's/192.168.2.71/'`grep $i /etc/hosts | awk  '{ print $1}'`'/g' ~/interfaces && cat ~/interfaces"; done && \
